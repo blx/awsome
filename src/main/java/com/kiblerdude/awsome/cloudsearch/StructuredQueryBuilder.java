@@ -3,7 +3,6 @@ package com.kiblerdude.awsome.cloudsearch;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
@@ -59,6 +58,8 @@ public final class StructuredQueryBuilder {
 	private final Optional<String> value;
 	private final Optional<String> from;
 	private final Optional<String> to;
+	
+	private Optional<Integer> boost;
 
 	/**
 	 * Default constructor. Creates a <code>matchall</code> expression.
@@ -71,6 +72,7 @@ public final class StructuredQueryBuilder {
 		this.value = Optional.absent();
 		this.from = Optional.absent();
 		this.to = Optional.absent();
+		this.boost = Optional.absent();
 	}
 
 	/**
@@ -88,6 +90,7 @@ public final class StructuredQueryBuilder {
 		this.value = Optional.of(value);
 		this.from = Optional.absent();
 		this.to = Optional.absent();
+		this.boost = Optional.absent();
 	}
 
 	/**
@@ -106,6 +109,7 @@ public final class StructuredQueryBuilder {
 		this.value = Optional.absent();
 		this.from = Optional.fromNullable(from);
 		this.to = Optional.fromNullable(to);
+		this.boost = Optional.absent();
 	}
 
 	/**
@@ -123,6 +127,7 @@ public final class StructuredQueryBuilder {
 		this.value = Optional.absent();
 		this.from = Optional.absent();
 		this.to = Optional.absent();
+		this.boost = Optional.absent();
 	}
 
 	/**
@@ -139,6 +144,17 @@ public final class StructuredQueryBuilder {
 		return toString();
 	}
 
+	/**
+	 * Add a cloudsearch boost to this term.
+	 * @param boost the boost weight
+	 * @return builder pattern
+	 */
+	public StructuredQueryBuilder withBoost(int boost)
+	{
+		this.boost = Optional.of(boost);
+		return this;
+	}
+	
 	/**
 	 * Compound expressions with the <code>and</code> operator. For example:
 	 * 
@@ -414,6 +430,13 @@ public final class StructuredQueryBuilder {
 
 	@Override
 	public String toString() {
+		
+		// ensure we include the boost option if present
+		String boostStr = "";
+		if (this.boost.isPresent()) {
+			boostStr = new StringBuilder("boost=").append(boost.get()).toString();
+		}
+		
 		// there are a few conditions to check:
 		// 1. matchall queries
 		// 2. compound (nested) queries
@@ -430,11 +453,11 @@ public final class StructuredQueryBuilder {
 			return Joiner.on(' ').join(queryParts);
 		} else if (value.isPresent()) {
 			ImmutableSet<String> queryParts = ImmutableSet.of("(",
-					type.toString(), "field=", field.get(), value.get(), ")");
+					type.toString(), "field=", field.get(), boostStr, value.get(), ")");
 			return Joiner.on(' ').join(queryParts);
 		} else {
 			ImmutableSet<String> queryParts = ImmutableSet.of("(",
-					type.toString(), "field=", field.get(), "{", from.or(""),
+					type.toString(), "field=", field.get(), boostStr, "{", from.or(""),
 					",", to.or(""), "}", ")");
 			return Joiner.on(' ').join(queryParts);
 		}
