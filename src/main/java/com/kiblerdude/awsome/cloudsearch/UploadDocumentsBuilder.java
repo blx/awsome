@@ -22,24 +22,6 @@ import com.google.common.collect.ImmutableSet;
  * <p>
  * The builder provides easy ways to add and remove documents from the
  * Cloudsearch index.
- * <p>
- * Usage:
- * <li>Implement a document model representing your Cloudsearch schema annotated
- * with Jackson annotations
- * <li>Instantiate a <code>UploadDocumentsBuilder</code> and add or remove
- * documents using the <code>add</code> or <code>delete</code> methods.
- * <li>Builds the <code>UploadDocumentsRequest</code> using the
- * <code>build()</code> method.
- * <p>
- * For example:
- * 
- * <pre>
- * MyDocument document = new MyDocument(&quot;hello&quot;, &quot;world&quot;);
- * UploadDocumentsBuilder&lt;MyDocument&gt; builder = new UploadDocumentsBuilder&lt;&gt;();
- * builder.add(&quot;id.1&quot;, document)
- * builder.delete(&quot;id.2&quot;)
- * UploadDocumentsRequest request = builder.build();
- * </pre>
  * 
  * @author kiblerj
  * 

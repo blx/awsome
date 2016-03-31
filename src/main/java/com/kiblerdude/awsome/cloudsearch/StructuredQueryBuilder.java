@@ -78,8 +78,8 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Constructor for expressions.
 	 * 
-	 * @param field
-	 * @param value
+	 * @param field The expression field
+	 * @param value The expression value
 	 */
 	private StructuredQueryBuilder(ExpressionType type, String field,
 			String value) {
@@ -96,9 +96,9 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Constructor for <code>range</code> expressions.
 	 * 
-	 * @param field
-	 * @param from
-	 * @param to
+	 * @param field The expression field
+	 * @param from The from value of the expression
+	 * @param to The to value of the expression
 	 */
 	private StructuredQueryBuilder(ExpressionType type, String field,
 			String from, String to) {
@@ -115,8 +115,8 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Constructor for nested expressions.
 	 * 
-	 * @param op
-	 * @param expression
+	 * @param op The ExpressionOperator to apply
+	 * @param expressions The nested expressions
 	 */
 	private StructuredQueryBuilder(ExpressionOperator op,
 			StructuredQueryBuilder... expressions) {
@@ -200,7 +200,7 @@ public final class StructuredQueryBuilder {
 	 * ( not EXPRESSION1 EXPRESSION2 )
 	 * </pre>
 	 * 
-	 * @param expressions
+	 * @param expressions One or more expressions to <code>not</code> together.
 	 * @return {@link StructuredQueryBuilder}
 	 */
 	public static StructuredQueryBuilder not(

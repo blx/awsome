@@ -26,24 +26,6 @@ import com.google.common.collect.Lists;
  * <p>
  * This class is thread safe.
  * <p>
- * Example:
- * <pre>
- * SQueue queue = new SQueue("myqueue", "client", MyMessage.class);
- * 
- * queue.push(new MyMessage("hello"));
- * queue.push(new MyMessage("world"));
- * 
- * Optional<MyMessage> message = queue.pop(); // "hello"
- * 
- * if (message.isPresent()) {
- *     // do something...
- * }
- * 
- * if (!queue.isEmpty()) {
- *     queue.clear();
- * }
- * 
- * </pre>
  * @author kiblerj
  *
  * @param <M> A Jackson annotated class representing the messages in the queue.
@@ -114,9 +96,8 @@ public final class SQueue<M extends Object> {
     
     /**
      * Pushes a message on to the queue.
-     * @param message
+     * @param message The message to push on the queue.
      * @return The receipt id of the message, or absent if the message was not pushed.
-     * @throws IOException
      */
     public Optional<String> push(M message) {
         checkNotNull(message, "message is null");        
@@ -172,6 +153,7 @@ public final class SQueue<M extends Object> {
     /**
      * Pops a message from the queue.
      * @return An {@link Optional} containing the next message on the queue, or absent if no message was popped.
+     * @throws IOException when failed to read from the queue.
      */
     public Optional<M> pop() throws IOException {
         fillBuffer();
@@ -182,6 +164,7 @@ public final class SQueue<M extends Object> {
      * Fills the internal buffer with messages from SQS.
      * 
      * @return <code>true</code> if the request was successful
+     * @throws IOException when failed to read from the queue.
      */
     private synchronized boolean fillBuffer() throws IOException {
         if (receiveBuffer.isEmpty()) {
