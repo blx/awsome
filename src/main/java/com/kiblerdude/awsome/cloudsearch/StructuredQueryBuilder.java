@@ -12,25 +12,25 @@ import com.google.common.collect.ImmutableSet;
  * <p>
  * For cleaner and less verbose code, it is recommended to import the functions
  * statically:
- * 
+ *
  * <pre>
  * import static io.awsome.cloudsearch.StructuredQueryBuilder.and;
  * import static io.awsome.cloudsearch.StructuredQueryBuilder.eq;
  * import static io.awsome.cloudsearch.StructuredQueryBuilder.range;
  * </pre>
- * 
+ *
  * Example:
- * 
+ *
  * <pre>
  * String structuredQuery = and(eq(&quot;field1&quot;, &quot;value&quot;), range(&quot;field2&quot;, 100, 200)).build();
  * </pre>
- * 
+ *
  * This results in the following structured query:
- * 
+ *
  * <pre>
  * (and (term field=field1 'value') (range field=field2 {100,200}))
  * </pre>
- * 
+ *
  * @author kiblerj
  */
 public final class StructuredQueryBuilder {
@@ -58,7 +58,7 @@ public final class StructuredQueryBuilder {
 	private final Optional<String> value;
 	private final Optional<String> from;
 	private final Optional<String> to;
-	
+
 	private Optional<Integer> boost;
 
 	/**
@@ -77,7 +77,7 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Constructor for expressions.
-	 * 
+	 *
 	 * @param field The expression field
 	 * @param value The expression value
 	 */
@@ -95,7 +95,7 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Constructor for <code>range</code> expressions.
-	 * 
+	 *
 	 * @param field The expression field
 	 * @param from The from value of the expression
 	 * @param to The to value of the expression
@@ -114,7 +114,7 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Constructor for nested expressions.
-	 * 
+	 *
 	 * @param op The ExpressionOperator to apply
 	 * @param expressions The nested expressions
 	 */
@@ -132,10 +132,10 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Builds the AWS Cloudsearch Structured Query as a String.
-	 * 
+	 *
 	 * @return {@link String} representation of the AWS Cloudsearch Structured
 	 *         Query. For example:
-	 * 
+	 *
 	 *         <pre>
 	 * ( and ( term field='field1' 'value1' ) )
 	 * </pre>
@@ -154,14 +154,14 @@ public final class StructuredQueryBuilder {
 		this.boost = Optional.of(boost);
 		return this;
 	}
-	
+
 	/**
 	 * Compound expressions with the <code>and</code> operator. For example:
-	 * 
+	 *
 	 * <pre>
 	 * ( and EXPRESSION1 EXPRESSION2 )
 	 * </pre>
-	 * 
+	 *
 	 * @param expressions
 	 *            One or more expressions to <code>and</code> together.
 	 * @return {@link StructuredQueryBuilder}
@@ -176,11 +176,11 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Compound expressions with the <code>or</code> operator. For example:
-	 * 
+	 *
 	 * <pre>
 	 * ( or EXPRESSION1 EXPRESSION2 )
 	 * </pre>
-	 * 
+	 *
 	 * @param expressions
 	 *            One or more expressions to <code>or</code> together.
 	 * @return {@link StructuredQueryBuilder}
@@ -194,31 +194,28 @@ public final class StructuredQueryBuilder {
 	}
 
 	/**
-	 * Negate expressions with the <code>not</code> operator. For example:
-	 * 
+	 * Negate an expression with the <code>not</code> operator. For example:
+	 *
 	 * <pre>
-	 * ( not EXPRESSION1 EXPRESSION2 )
+	 * ( not EXPRESSION )
 	 * </pre>
-	 * 
-	 * @param expressions One or more expressions to <code>not</code> together.
+	 *
+	 * @param expression An expression to <code>not</code>.
 	 * @return {@link StructuredQueryBuilder}
 	 */
 	public static StructuredQueryBuilder not(
-			StructuredQueryBuilder... expressions) {
-		if (expressions.length == 0)
-			throw new IllegalArgumentException(
-					"At least one expression is required");
-		return new StructuredQueryBuilder(ExpressionOperator.NOT, expressions);
+			StructuredQueryBuilder expression) {
+		return new StructuredQueryBuilder(ExpressionOperator.NOT, expression);
 	}
 
 	/**
 	 * Creates a <code>matchall</code> search expression, which is used to
 	 * return all the documents in a Cloudsearch domain. For example:
-	 * 
+	 *
 	 * <pre>
 	 * (matchall)
 	 * </pre>
-	 * 
+	 *
 	 * @return {@link StructuredQueryBuilder}
 	 */
 	public static StructuredQueryBuilder matchall() {
@@ -227,11 +224,11 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Creates a <code>phrase</code> search expression. For example:
-	 * 
+	 *
 	 * <pre>
 	 * ( phrase field=field1 'the phrase' )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the phrase in.
 	 * @param phrase
@@ -245,11 +242,11 @@ public final class StructuredQueryBuilder {
 
 	/**
 	 * Creates a <code>prefix</code> search expression. For example:
-	 * 
+	 *
 	 * <pre>
 	 * ( prefix field=field1 'val' )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the prefix.
 	 * @param prefix
@@ -264,11 +261,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>term</code> search expression for String values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( term field=field1 'value' )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the term.
 	 * @param value
@@ -283,11 +280,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>term</code> search expression for Long values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( term field=field1 100 )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the term.
 	 * @param value
@@ -302,11 +299,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>term</code> search expression for Double values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( term field=field1 100.0 )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the term.
 	 * @param value
@@ -321,11 +318,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>term</code> search expression for Date values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( term field=field1 '1970-01-01T00:00:00Z' )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the term.
 	 * @param value
@@ -341,11 +338,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>range</code> search expression for String values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( range field=field1 { 'abc' , 'def' } )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the range.
 	 * @param from
@@ -364,11 +361,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>range</code> search expression for Long values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( range field=field1 { 100 , 200 } )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the range.
 	 * @param from
@@ -385,11 +382,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>range</code> search expression for Double values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( range field=field1 { 0.0 , 100.0 } )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the range.
 	 * @param from
@@ -407,11 +404,11 @@ public final class StructuredQueryBuilder {
 	/**
 	 * Creates a <code>range</code> search expression for Date values. For
 	 * example:
-	 * 
+	 *
 	 * <pre>
 	 * ( range field=field1 { '1970-01-01T00:00:00Z' , '1971-01-01T00:00:00Z' } )
 	 * </pre>
-	 * 
+	 *
 	 * @param field
 	 *            The name of the indexed field to search for the range.
 	 * @param from
@@ -430,13 +427,13 @@ public final class StructuredQueryBuilder {
 
 	@Override
 	public String toString() {
-		
+
 		// ensure we include the boost option if present
 		String boostStr = "";
 		if (this.boost.isPresent()) {
 			boostStr = new StringBuilder("boost=").append(boost.get()).toString();
 		}
-		
+
 		// there are a few conditions to check:
 		// 1. matchall queries
 		// 2. compound (nested) queries
