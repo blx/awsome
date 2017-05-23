@@ -1,11 +1,15 @@
 package com.kiblerdude.awsome.cloudsearch;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TimeZone;
 
 /**
  * Builds structured queries for AWS Cloudsearch.
@@ -14,9 +18,9 @@ import com.google.common.collect.ImmutableSet;
  * statically:
  *
  * <pre>
- * import static io.awsome.cloudsearch.StructuredQueryBuilder.and;
- * import static io.awsome.cloudsearch.StructuredQueryBuilder.eq;
- * import static io.awsome.cloudsearch.StructuredQueryBuilder.range;
+ * import static io.awsome.cloudsearch.StructuredQuery.and;
+ * import static io.awsome.cloudsearch.StructuredQuery.eq;
+ * import static io.awsome.cloudsearch.StructuredQuery.range;
  * </pre>
  *
  * Example:
@@ -33,7 +37,7 @@ import com.google.common.collect.ImmutableSet;
  *
  * @author kiblerj
  */
-public final class StructuredQueryBuilder {
+public final class StructuredQuery {
 
 	// strings and dates need to be surrounded by single quotes
 	private static final String QUOTED_FORMAT = "'%s'";
@@ -42,37 +46,36 @@ public final class StructuredQueryBuilder {
 	// IETF RFC3339
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
-	private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>() {
-		@Override
-		protected SimpleDateFormat initialValue() {
-			SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT);
-			format.setTimeZone(TimeZone.getTimeZone("GMT"));
-			return format;
-		}
-	};
+	private static final ThreadLocal<SimpleDateFormat> formatter = ThreadLocal.withInitial(() -> {
+    SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT);
+    format.setTimeZone(TimeZone.getTimeZone("GMT"));
+    return format;
+  });
+
+	private static final Joiner spaceJoiner = Joiner.on(" ");
 
 	private final ExpressionOperator operator;
 	private final ExpressionType type;
-	private final Optional<ImmutableSet<StructuredQueryBuilder>> nested;
-	private final Optional<String> field;
+	private final Set<StructuredQuery> nested;
+	private final String field;
 	private final Optional<String> value;
 	private final Optional<String> from;
 	private final Optional<String> to;
 
-	private Optional<Integer> boost;
+	private Integer boost;
 
 	/**
 	 * Default constructor. Creates a <code>matchall</code> expression.
 	 */
-	private StructuredQueryBuilder() {
+	private StructuredQuery() {
 		this.operator = ExpressionOperator.NONE;
 		this.type = ExpressionType.MATCHALL;
-		this.nested = Optional.absent();
-		this.field = Optional.absent();
+		this.nested = null;
+		this.field = null;
 		this.value = Optional.absent();
 		this.from = Optional.absent();
 		this.to = Optional.absent();
-		this.boost = Optional.absent();
+		this.boost = null;
 	}
 
 	/**
@@ -81,16 +84,15 @@ public final class StructuredQueryBuilder {
 	 * @param field The expression field
 	 * @param value The expression value
 	 */
-	private StructuredQueryBuilder(ExpressionType type, String field,
-			String value) {
+	private StructuredQuery(ExpressionType type, String field, String value) {
 		this.operator = ExpressionOperator.NONE;
 		this.type = type;
-		this.nested = Optional.absent();
-		this.field = Optional.of(field);
+		this.nested = null;
+		this.field = Objects.requireNonNull(field);
 		this.value = Optional.of(value);
 		this.from = Optional.absent();
 		this.to = Optional.absent();
-		this.boost = Optional.absent();
+		this.boost = null;
 	}
 
 	/**
@@ -100,16 +102,15 @@ public final class StructuredQueryBuilder {
 	 * @param from The from value of the expression
 	 * @param to The to value of the expression
 	 */
-	private StructuredQueryBuilder(ExpressionType type, String field,
-			String from, String to) {
+	private StructuredQuery(ExpressionType type, String field, String from, String to) {
 		this.operator = ExpressionOperator.NONE;
 		this.type = type;
-		this.nested = Optional.absent();
-		this.field = Optional.of(field);
+		this.nested = null;
+		this.field = Objects.requireNonNull(field);
 		this.value = Optional.absent();
 		this.from = Optional.fromNullable(from);
 		this.to = Optional.fromNullable(to);
-		this.boost = Optional.absent();
+		this.boost = null;
 	}
 
 	/**
@@ -118,16 +119,15 @@ public final class StructuredQueryBuilder {
 	 * @param op The ExpressionOperator to apply
 	 * @param expressions The nested expressions
 	 */
-	private StructuredQueryBuilder(ExpressionOperator op,
-			StructuredQueryBuilder... expressions) {
+	private StructuredQuery(ExpressionOperator op, StructuredQuery... expressions) {
 		this.operator = op;
 		this.type = ExpressionType.NONE;
-		this.nested = Optional.of(ImmutableSet.copyOf(expressions));
-		this.field = Optional.absent();
+		this.nested = ImmutableSet.copyOf(expressions);
+		this.field = null;
 		this.value = Optional.absent();
 		this.from = Optional.absent();
 		this.to = Optional.absent();
-		this.boost = Optional.absent();
+		this.boost = null;
 	}
 
 	/**
@@ -149,9 +149,9 @@ public final class StructuredQueryBuilder {
 	 * @param boost the boost weight
 	 * @return builder pattern
 	 */
-	public StructuredQueryBuilder withBoost(int boost)
+	public StructuredQuery withBoost(int boost)
 	{
-		this.boost = Optional.of(boost);
+		this.boost = boost;
 		return this;
 	}
 
@@ -164,14 +164,12 @@ public final class StructuredQueryBuilder {
 	 *
 	 * @param expressions
 	 *            One or more expressions to <code>and</code> together.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder and(
-			StructuredQueryBuilder... expressions) {
+	public static StructuredQuery and(StructuredQuery... expressions) {
 		if (expressions.length == 0)
-			throw new IllegalArgumentException(
-					"At least one expression is required");
-		return new StructuredQueryBuilder(ExpressionOperator.AND, expressions);
+			throw new IllegalArgumentException("At least one expression is required");
+		return new StructuredQuery(ExpressionOperator.AND, expressions);
 	}
 
 	/**
@@ -183,14 +181,12 @@ public final class StructuredQueryBuilder {
 	 *
 	 * @param expressions
 	 *            One or more expressions to <code>or</code> together.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder or(
-			StructuredQueryBuilder... expressions) {
+	public static StructuredQuery or(StructuredQuery... expressions) {
 		if (expressions.length == 0)
-			throw new IllegalArgumentException(
-					"At least one expression is required");
-		return new StructuredQueryBuilder(ExpressionOperator.OR, expressions);
+			throw new IllegalArgumentException("At least one expression is required");
+		return new StructuredQuery(ExpressionOperator.OR, expressions);
 	}
 
 	/**
@@ -201,11 +197,10 @@ public final class StructuredQueryBuilder {
 	 * </pre>
 	 *
 	 * @param expression An expression to <code>not</code>.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder not(
-			StructuredQueryBuilder expression) {
-		return new StructuredQueryBuilder(ExpressionOperator.NOT, expression);
+	public static StructuredQuery not(StructuredQuery expression) {
+		return new StructuredQuery(ExpressionOperator.NOT, expression);
 	}
 
 	/**
@@ -216,10 +211,10 @@ public final class StructuredQueryBuilder {
 	 * (matchall)
 	 * </pre>
 	 *
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder matchall() {
-		return new StructuredQueryBuilder();
+	public static StructuredQuery matchall() {
+		return new StructuredQuery();
 	}
 
 	/**
@@ -233,10 +228,10 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the phrase in.
 	 * @param phrase
 	 *            The phrase to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder phrase(String field, String phrase) {
-		return new StructuredQueryBuilder(ExpressionType.PHRASE, field,
+	public static StructuredQuery phrase(String field, String phrase) {
+		return new StructuredQuery(ExpressionType.PHRASE, field,
 				String.format(QUOTED_FORMAT, phrase));
 	}
 
@@ -251,10 +246,10 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the prefix.
 	 * @param prefix
 	 *            The prefix to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder prefix(String field, String prefix) {
-		return new StructuredQueryBuilder(ExpressionType.PREFIX, field,
+	public static StructuredQuery prefix(String field, String prefix) {
+		return new StructuredQuery(ExpressionType.PREFIX, field,
 				String.format(QUOTED_FORMAT, prefix));
 	}
 
@@ -270,10 +265,10 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the term.
 	 * @param value
 	 *            The value to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder eq(String field, String value) {
-		return new StructuredQueryBuilder(ExpressionType.TERM, field,
+	public static StructuredQuery eq(String field, String value) {
+		return new StructuredQuery(ExpressionType.TERM, field,
 				String.format(QUOTED_FORMAT, value));
 	}
 
@@ -289,10 +284,10 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the term.
 	 * @param value
 	 *            The value to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder eq(String field, Long value) {
-		return new StructuredQueryBuilder(ExpressionType.TERM, field,
+	public static StructuredQuery eq(String field, Long value) {
+		return new StructuredQuery(ExpressionType.TERM, field,
 				value.toString());
 	}
 
@@ -308,10 +303,10 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the term.
 	 * @param value
 	 *            The value to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder eq(String field, Double value) {
-		return new StructuredQueryBuilder(ExpressionType.TERM, field,
+	public static StructuredQuery eq(String field, Double value) {
+		return new StructuredQuery(ExpressionType.TERM, field,
 				value.toString());
 	}
 
@@ -327,11 +322,11 @@ public final class StructuredQueryBuilder {
 	 *            The name of the indexed field to search for the term.
 	 * @param value
 	 *            The value to search for.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder eq(String field, Date value) {
+	public static StructuredQuery eq(String field, Date value) {
 		String date = formatter.get().format(value);
-		return new StructuredQueryBuilder(ExpressionType.TERM, field,
+		return new StructuredQuery(ExpressionType.TERM, field,
 				String.format(QUOTED_FORMAT, date));
 	}
 
@@ -349,11 +344,10 @@ public final class StructuredQueryBuilder {
 	 *            The value to search from.
 	 * @param to
 	 *            The value to search to.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder range(String field, String from,
-			String to) {
-		return new StructuredQueryBuilder(ExpressionType.RANGE, field,
+	public static StructuredQuery range(String field, String from, String to) {
+		return new StructuredQuery(ExpressionType.RANGE, field,
 				String.format(QUOTED_FORMAT, from), String.format(
 						QUOTED_FORMAT, to));
 	}
@@ -372,10 +366,10 @@ public final class StructuredQueryBuilder {
 	 *            The value to search from.
 	 * @param to
 	 *            The value to search to.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder range(String field, Long from, Long to) {
-		return new StructuredQueryBuilder(ExpressionType.RANGE, field,
+	public static StructuredQuery range(String field, Long from, Long to) {
+		return new StructuredQuery(ExpressionType.RANGE, field,
 				from.toString(), to.toString());
 	}
 
@@ -393,11 +387,10 @@ public final class StructuredQueryBuilder {
 	 *            The value to search from.
 	 * @param to
 	 *            The value to search to.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder range(String field, Double from,
-			Double to) {
-		return new StructuredQueryBuilder(ExpressionType.RANGE, field,
+	public static StructuredQuery range(String field, Double from, Double to) {
+		return new StructuredQuery(ExpressionType.RANGE, field,
 				from.toString(), to.toString());
 	}
 
@@ -415,12 +408,12 @@ public final class StructuredQueryBuilder {
 	 *            The value to search from.
 	 * @param to
 	 *            The value to search to.
-	 * @return {@link StructuredQueryBuilder}
+	 * @return {@link StructuredQuery}
 	 */
-	public static StructuredQueryBuilder range(String field, Date from, Date to) {
+	public static StructuredQuery range(String field, Date from, Date to) {
 		String fromDate = formatter.get().format(from);
 		String toDate = formatter.get().format(to);
-		return new StructuredQueryBuilder(ExpressionType.RANGE, field,
+		return new StructuredQuery(ExpressionType.RANGE, field,
 				String.format(QUOTED_FORMAT, fromDate), String.format(
 						QUOTED_FORMAT, toDate));
 	}
@@ -429,10 +422,7 @@ public final class StructuredQueryBuilder {
 	public String toString() {
 
 		// ensure we include the boost option if present
-		String boostStr = "";
-		if (this.boost.isPresent()) {
-			boostStr = new StringBuilder("boost=").append(boost.get()).toString();
-		}
+    final String boostStr = boost == null ? "" : "boost=" + boost;
 
 		// there are a few conditions to check:
 		// 1. matchall queries
@@ -440,23 +430,21 @@ public final class StructuredQueryBuilder {
 		// 3. value queries
 		// 4. range queries
 		if (ExpressionType.MATCHALL.equals(type)) {
-			ImmutableSet<String> queryParts = ImmutableSet.of("(",
-					type.toString(), ")");
-			return Joiner.on(' ').join(queryParts);
-		} else if (nested.isPresent()) {
-			String nestedQuery = Joiner.on(' ').join(nested.get());
-			ImmutableSet<String> queryParts = ImmutableSet.of("(",
+			return spaceJoiner.join("(", type.toString(),")");
+		} else if (nested != null) {
+			String nestedQuery = spaceJoiner.join(nested);
+			List<String> queryParts = ImmutableList.of("(",
 					operator.toString(), nestedQuery, ")");
-			return Joiner.on(' ').join(queryParts);
+			return spaceJoiner.join(queryParts);
 		} else if (value.isPresent()) {
-			ImmutableSet<String> queryParts = ImmutableSet.of("(",
-					type.toString(), "field=", field.get(), boostStr, value.get(), ")");
-			return Joiner.on(' ').join(queryParts);
+			List<String> queryParts = ImmutableList.of("(",
+					type.toString(), "field=", field, boostStr, value.get(), ")");
+			return spaceJoiner.join(queryParts);
 		} else {
-			ImmutableSet<String> queryParts = ImmutableSet.of("(",
-					type.toString(), "field=", field.get(), boostStr, "{", from.or(""),
+			List<String> queryParts = ImmutableList.of("(",
+					type.toString(), "field=", field, boostStr, "{", from.or(""),
 					",", to.or(""), "}", ")");
-			return Joiner.on(' ').join(queryParts);
+			return spaceJoiner.join(queryParts);
 		}
 	}
 }
